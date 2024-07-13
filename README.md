@@ -1,1 +1,1 @@
-# partners-app-ui
+# Partners App UI
