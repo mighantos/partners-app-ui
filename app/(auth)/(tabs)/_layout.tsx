@@ -1,5 +1,5 @@
 import {Tabs} from "expo-router";
-import {Ionicons} from "@expo/vector-icons";
+import {Ionicons, MaterialCommunityIcons} from "@expo/vector-icons";
 
 export default function TabsLayout() {
     return (
@@ -14,13 +14,20 @@ export default function TabsLayout() {
                 headerTitle: "Home",
                 tabBarIcon: ({color, focused}) => (
                     <Ionicons name={focused ? "home" : "home-outline"} color={color} size={20}/>
-                )
+                ),
             }}/>
             <Tabs.Screen name="meetingPlans" options={{
                 headerTitle: "Meeting plans",
                 tabBarIcon: ({color, focused}) => (
                     <Ionicons name={focused ? "calendar" : "calendar-outline"} color={color} size={20}/>
-                )
+                ),
+            }}/>
+            <Tabs.Screen name="profile" options={{
+                headerTitle: "Profile",
+                tabBarIcon: ({color, focused}) => (
+                    <MaterialCommunityIcons name={focused ? "account-circle" : "account-circle-outline"} color={color}
+                                            size={20}/>
+                ),
             }}/>
         </Tabs>
     );
