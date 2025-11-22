@@ -17,7 +17,7 @@ export default function TabsLayout() {
                 ),
             }}/>
             <Tabs.Screen name="meetingPlans" options={{
-                headerTitle: "Meeting plans",
+                headerShown: false,
                 tabBarIcon: ({color, focused}) => (
                     <Ionicons name={focused ? "calendar" : "calendar-outline"} color={color} size={20}/>
                 ),
