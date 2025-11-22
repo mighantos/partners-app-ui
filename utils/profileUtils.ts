@@ -1,14 +1,14 @@
 import {jwtDecode} from "jwt-decode";
 import {JwtBody} from "@/utils/tokenUtils";
 
-export interface User {
+export interface Profile {
     firstName: string;
     lastName: string;
     email: string;
 }
 
-export const UserUtils = {
-    createUser(accessToken: string): User {
+export const ProfileUtils = {
+    createUser(accessToken: string): Profile {
         const jwtBody = jwtDecode<JwtBody>(accessToken);
 
         return {

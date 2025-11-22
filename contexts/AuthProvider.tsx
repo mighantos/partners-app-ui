@@ -12,18 +12,20 @@ import {
 import {Token, TokenUtils} from "@/utils/tokenUtils";
 import {Platform} from "expo-modules-core";
 import {TokenStorage} from "@/utils/tokenStorage";
-import {User, UserUtils} from "@/utils/userUtils";
+import {Profile, ProfileUtils} from "@/utils/profileUtils";
 import {get, HttpMethod} from "@/modules/api/http";
 import {Endpoints} from "@/modules/api/endpoints";
 
 const AuthContext = createContext({
-    user: null as User | null,
+    user: null as Profile | null,
     signIn: () => {
     },
     signOut: () => {
     },
     isLoggedIn: (): boolean => false,
-    requestWithAuth: <T, >(method: HttpMethod, endpoint: Endpoints, config?: any): Promise<T> => {return {} as Promise<T>},
+    requestWithAuth: <T, >(method: HttpMethod, endpoint: Endpoints, config?: any): Promise<T> => {
+        return {} as Promise<T>;
+    },
     isLoading: false,
     error: null as AuthError | null,
 });
@@ -42,7 +44,7 @@ export default function AuthProvider({children}: { children: ReactNode }) {
     const discovery = useAutoDiscovery(process.env.EXPO_PUBLIC_KEYCLOAK_URL!)!;
     const clientId = process.env.EXPO_PUBLIC_KEYCLOAK_CLIENT_ID!;
     const redirectUri = makeRedirectUri({scheme: "partnersappui://"});
-    const [user, setUser] = useState<User | null>(null);
+    const [user, setUser] = useState<Profile | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<AuthError | null>(null);
     const [accessToken, setAccessToken] = useState<Token | null>(null);
@@ -76,6 +78,9 @@ export default function AuthProvider({children}: { children: ReactNode }) {
     const requestWithAuth = async <T, >(method: HttpMethod, endpoint: Endpoints, config?: any) => {
         if (!accessToken) {
             throw new Error("Access token is missing");
+        }
+        if (!TokenUtils.isFresh(accessToken)) {
+            await refreshAccessToken()
         }
         return get<T>(endpoint, {
             Authorization: `${accessToken.tokenType} ${accessToken.token}`,
@@ -115,42 +120,10 @@ export default function AuthProvider({children}: { children: ReactNode }) {
         }
     }, [response]);
 
-    // refresh token
-    useEffect(() => {
-        if (!refreshToken || !discovery) {
-            return;
-        }
-        const nextRefreshIn = accessToken ? TokenUtils.getExpiresInWithBuffer(accessToken) : 0;
-        setTimeout(() => {
-            refreshAsync({
-                clientId,
-                refreshToken: refreshToken.token,
-            }, discovery).then(async (tokenResponse) => {
-                const token = TokenUtils.createToken(tokenResponse.accessToken);
-                setAccessToken(token);
-            });
-        }, nextRefreshIn * 1000);
-    }, [refreshToken, discovery]);
-
     // restore session
     useEffect(() => {
-        const restoreSession = async () => {
-            setIsLoading(true);
-            try {
-                const refreshToken = await TokenStorage.getRefreshToken();
-                if (TokenUtils.isFresh(refreshToken)) {
-                    setRefreshToken(refreshToken);
-                } else {
-                    await TokenStorage.clearRefreshToken();
-                }
-            } catch (e) {
-                console.error(e);
-            } finally {
-                setIsLoading(false);
-            }
-        };
         restoreSession();
-    }, [isWeb]);
+    }, [isWeb, discovery]);
 
     // setUser
     useEffect(() => {
@@ -158,8 +131,45 @@ export default function AuthProvider({children}: { children: ReactNode }) {
             setUser(null);
             return;
         }
-        setUser(UserUtils.createUser(accessToken.token));
+        setUser(ProfileUtils.createUser(accessToken.token));
     }, [accessToken]);
+
+    const refreshAccessToken = async (refreshTokenProp?: Token | null) => {
+        const refreshTokenValue = refreshTokenProp ? refreshTokenProp : refreshToken;
+        if (!TokenUtils.isFresh(refreshTokenValue)) {
+            await clearTokens()
+            return;
+        }
+        const tokenResponse = await refreshAsync({
+            clientId,
+            refreshToken: refreshTokenValue?.token,
+        }, discovery);
+        const accessToken = TokenUtils.createToken(tokenResponse.accessToken);
+        setAccessToken(accessToken);
+    };
+
+    const restoreSession = async () => {
+        if (!discovery) return;
+        try {
+            const refreshToken = await TokenStorage.getRefreshToken();
+            if (TokenUtils.isFresh(refreshToken)) {
+                setRefreshToken(refreshToken);
+                await refreshAccessToken(refreshToken);
+            } else {
+                await TokenStorage.clearRefreshToken();
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const clearTokens = async () => {
+        setAccessToken(null)
+        setRefreshToken(null)
+        await TokenStorage.clearRefreshToken();
+    }
 
     const revokeToken = async (token: Token | null) => {
         if (TokenUtils.isFresh(token)) {
