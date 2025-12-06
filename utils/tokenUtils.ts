@@ -27,7 +27,6 @@ export enum TokenType {
 }
 
 export const TokenUtils = {
-
     createToken(tokenString: string): Token {
         const jwtBody = jwtDecode<JwtBody>(tokenString);
         return {
@@ -42,21 +41,5 @@ export const TokenUtils = {
             return false;
         }
         return token.expiration > getCurrentTimeInSeconds() - TOKEN_EXPIRATION_TIME_BUFFER;
-    },
-
-    getExpiresIn(token: Token) {
-        let expiresIn = token.expiration - getCurrentTimeInSeconds();
-        if (expiresIn < 0) {
-            expiresIn = 0;
-        }
-        return expiresIn;
-    },
-
-    getExpiresInWithBuffer(token: Token) {
-        let expiresIn = TokenUtils.getExpiresIn(token) - TOKEN_EXPIRATION_TIME_BUFFER;
-        if (expiresIn < 0) {
-            expiresIn = 0;
-        }
-        return expiresIn;
     },
 };
