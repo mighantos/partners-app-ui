@@ -15,6 +15,7 @@ import {TokenStorage} from "@/utils/tokenStorage";
 import {Profile, ProfileUtils} from "@/utils/profileUtils";
 import {get, HttpMethod} from "@/modules/api/http";
 import {Endpoints} from "@/modules/api/endpoints";
+import {SessionExpiredError} from "@/errors/SessionExpiredError";
 
 const AuthContext = createContext({
     user: null as Profile | null,
@@ -23,7 +24,7 @@ const AuthContext = createContext({
     signOut: () => {
     },
     isLoggedIn: (): boolean => false,
-    requestWithAuth: <T, >(method: HttpMethod, endpoint: Endpoints, config?: any): Promise<T> => {
+    requestWithAuth: <T, >(method: HttpMethod, endpoint: Endpoints, config?: any): Promise<T | null> => {
         return {} as Promise<T>;
     },
     isLoading: false,
@@ -76,14 +77,16 @@ export default function AuthProvider({children}: { children: ReactNode }) {
     const isLoggedIn = () => refreshToken != null;
 
     const requestWithAuth = async <T, >(method: HttpMethod, endpoint: Endpoints, config?: any) => {
-        if (!accessToken) {
-            throw new Error("Access token is missing");
-        }
         if (!TokenUtils.isFresh(accessToken)) {
-            await refreshAccessToken()
+            console.log("here");
+            if (!await refreshAccessToken()) {
+                console.log("No refresh token.");
+                return null;
+            }
+            console.log("Not here");
         }
         return get<T>(endpoint, {
-            Authorization: `${accessToken.tokenType} ${accessToken.token}`,
+            Authorization: [accessToken?.tokenType, accessToken?.token].join(" "),
         });
 
     };
@@ -134,18 +137,32 @@ export default function AuthProvider({children}: { children: ReactNode }) {
         setUser(ProfileUtils.createUser(accessToken.token));
     }, [accessToken]);
 
-    const refreshAccessToken = async (refreshTokenProp?: Token | null) => {
+    const refreshAccessToken = async (refreshTokenProp?: Token | null): Promise<boolean> => {
         const refreshTokenValue = refreshTokenProp ? refreshTokenProp : refreshToken;
         if (!TokenUtils.isFresh(refreshTokenValue)) {
-            await clearTokens()
-            return;
+            await clearTokens();
+            return false;
         }
-        const tokenResponse = await refreshAsync({
-            clientId,
-            refreshToken: refreshTokenValue?.token,
-        }, discovery);
-        const accessToken = TokenUtils.createToken(tokenResponse.accessToken);
-        setAccessToken(accessToken);
+        try {
+            const tokenResponse = await refreshAsync({
+                clientId,
+                refreshToken: refreshTokenValue?.token,
+            }, discovery);
+            const accessToken = TokenUtils.createToken(tokenResponse.accessToken);
+            setAccessToken(accessToken);
+        } catch (e) {
+            const sessionExpiredError = e as SessionExpiredError;
+            if (sessionExpiredError.code === "invalid_grant") {
+                console.log("Failed to refresh token:", sessionExpiredError.description);
+                await clearTokens();
+            } else {
+                console.error(e);
+                console.error(JSON.stringify(e));
+                // TODO: handle failed token request
+            }
+            return false;
+        }
+        return true;
     };
 
     const restoreSession = async () => {
@@ -166,10 +183,10 @@ export default function AuthProvider({children}: { children: ReactNode }) {
     };
 
     const clearTokens = async () => {
-        setAccessToken(null)
-        setRefreshToken(null)
+        setAccessToken(null);
+        setRefreshToken(null);
         await TokenStorage.clearRefreshToken();
-    }
+    };
 
     const revokeToken = async (token: Token | null) => {
         if (TokenUtils.isFresh(token)) {

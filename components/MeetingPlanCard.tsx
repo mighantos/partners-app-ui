@@ -10,7 +10,7 @@ type Props = {
 export default function MeetingPlanCard({meetingPlan}: Props) {
     return (
         <Link href={{pathname: "/meetingPlans/[meetingPlanId]", params: {meetingPlanId: meetingPlan.id!}}}>
-            <Surface elevation={1} key={meetingPlan.id} style={styles.p2}>
+            <Surface elevation={1} style={styles.p2}>
                 <Text variant="titleMedium">
                     {meetingPlan.title}
                 </Text>

@@ -8,7 +8,7 @@ import {HttpMethod} from "@/modules/api/http";
 import {Endpoints} from "@/modules/api/endpoints";
 import {useAuth} from "@/contexts/AuthProvider";
 import {MeetingPlanDto} from "@/modules/api/dto/MeetingPlanDto";
-import {Surface, Text} from "react-native-paper";
+import {Text} from "react-native-paper";
 import MeetingPlanCard from "@/components/MeetingPlanCard";
 
 export default function MeetingPlansScreen() {
@@ -23,14 +23,14 @@ export default function MeetingPlansScreen() {
     useEffect(() => {
         if (isLoading) return;
         setLoadingPlans(true);
-        requestWithAuth<MeetingPlanDto[]>(HttpMethod.GET, Endpoints.MEETINGS).then(data => setMeetingPlans(data));
+        requestWithAuth<MeetingPlanDto[]>(HttpMethod.GET, Endpoints.MEETINGS).then(data => setMeetingPlans(data ?? []));
         setLoadingPlans(false);
     }, [isLoading]);
 
     if (!meetingPlans) return null;
 
     const meetingPlanCards = meetingPlans.map((meetingPlan: MeetingPlanDto) => (
-        <MeetingPlanCard meetingPlan={meetingPlan}/>
+        <MeetingPlanCard meetingPlan={meetingPlan} key={meetingPlan.id}/>
     ));
 
     return (
