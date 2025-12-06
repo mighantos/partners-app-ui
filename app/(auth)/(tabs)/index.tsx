@@ -1,11 +1,11 @@
 import {StyleSheet, Text, View} from "react-native";
-import Button from "@/components/Button";
+import {Link} from "expo-router";
 
-export default function MeetingPlans() {
+export default function Index() {
     return (
         <View style={styles.container}>
-            <Text style={styles.text}>Meeting plans</Text>
-            <Button label={"New"}/>
+            <Text style={styles.text}>Index.</Text>
+            <Link href={"/meetingPlans"} style={styles.link}>Go to MeetingPlans</Link>
         </View>
     );
 }
@@ -18,5 +18,10 @@ const styles = StyleSheet.create({
     },
     text: {
         color: "white",
-    }
-})
+    },
+    link: {
+        fontSize: 20,
+        textDecorationLine: "underline",
+        color: "white",
+    },
+});

@@ -1,15 +1,19 @@
 import {Pressable, StyleSheet, Text, View} from "react-native";
+import {useAuth} from "@/contexts/AuthProvider";
+import {HttpMethod} from "@/modules/api/http";
+import {Endpoints} from "@/modules/api/endpoints";
 
 type Props = {
     label: string;
 }
 
 export default function Button({label}: Props) {
+    const {requestWithAuth}=useAuth();
     return (
         <View>
             <Pressable style={styles.buttonContainer}
                        onPress={() => {
-                           getMeetings().then(data => alert(data));
+                           requestWithAuth(HttpMethod.GET, Endpoints.MEETINGS).then(data => alert(JSON.stringify(data)));
                        }}>
                 <Text>{label}</Text>
             </Pressable>
@@ -22,18 +26,3 @@ const styles = StyleSheet.create({
         padding: 10
     }
 })
-
-const getMeetings = async () => {
-    try {
-        const res = await fetch("http://localhost:8080/partners-meeting", {
-            method: "GET",
-            headers: {
-                "Authorization": "Bearer " + ""
-            }
-        });
-        const json = await res.json();
-        return JSON.stringify(json);
-    } catch (error) {
-        console.error(error);
-    }
-}
